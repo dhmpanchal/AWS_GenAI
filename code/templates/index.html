@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Task Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 40px 16px; }
+    .container { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 32px; width: 100%; max-width: 520px; }
+    h1 { font-size: 1.5rem; margin-bottom: 24px; color: #232f3e; }
+    .form-group { display: flex; gap: 8px; margin-bottom: 24px; }
+    input[type="text"] { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; }
+    select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; }
+    button { padding: 8px 16px; background: #ff9900; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95rem; }
+    button:hover { background: #e68a00; }
+    .error { color: #c0392b; font-size: 0.85rem; margin-bottom: 12px; min-height: 18px; }
+    ul { list-style: none; }
+    li { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 4px; margin-bottom: 8px; background: #f8f9fa; border-left: 4px solid #ff9900; }
+    li span { font-size: 0.95rem; color: #333; }
+    .badge { background: #232f3e; color: #fff; border-radius: 12px; padding: 2px 8px; font-size: 0.78rem; margin-right: 10px; }
+    .remove-btn { background: #c0392b; padding: 4px 10px; font-size: 0.82rem; }
+    .remove-btn:hover { background: #a93226; }
+    .empty { color: #888; font-size: 0.9rem; text-align: center; padding: 16px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Task Tracker</h1>
+    <div class="form-group">
+      <input type="text" id="taskName" placeholder="Task name" />
+      <select id="taskPriority">
+        <option value="1">P1</option>
+        <option value="2">P2</option>
+        <option value="3" selected>P3</option>
+        <option value="4">P4</option>
+        <option value="5">P5</option>
+      </select>
+      <button onclick="addTask()">Add</button>
+    </div>
+    <div class="error" id="errorMsg"></div>
+    <ul id="taskList"></ul>
+  </div>
+
+  <script>
+    async function fetchTasks() {
+      const res = await fetch("/tasks");
+      const tasks = await res.json();
+      const list = document.getElementById("taskList");
+      list.innerHTML = tasks.length
+        ? tasks.map((t, i) => `
+            <li>
+              <span><span class="badge">P${t.priority}</span>${t.name}</span>
+              <button class="remove-btn" onclick="removeTask(${i})">Remove</button>
+            </li>`).join("")
+        : `<li class="empty">No tasks yet.</li>`;
+    }
+
+    async function addTask() {
+      const name = document.getElementById("taskName").value.trim();
+      const priority = document.getElementById("taskPriority").value;
+      const errorMsg = document.getElementById("errorMsg");
+      errorMsg.textContent = "";
+
+      if (!name) { errorMsg.textContent = "Task name cannot be empty."; return; }
+
+      const res = await fetch("/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, priority })
+      });
+      const data = await res.json();
+      if (!res.ok) { errorMsg.textContent = data.error; return; }
+      document.getElementById("taskName").value = "";
+      fetchTasks();
+    }
+
+    async function removeTask(index) {
+      const res = await fetch(`/tasks/${index}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) { document.getElementById("errorMsg").textContent = data.error; return; }
+      fetchTasks();
+    }
+
+    fetchTasks();
+  </script>
+</body>
+</html>
